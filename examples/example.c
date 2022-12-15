@@ -43,7 +43,7 @@ int main(void) {
         .product_id = 0x0001,
         .serial = 0x0000,
         .product_type = (0x01 << 8) | 0x01,
-        .feature_config_count = 4,
+        .feature_config_count = 0,
         .user_data_address = 0xA0,
         .features = {
             .serial = 1,
