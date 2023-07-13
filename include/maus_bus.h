@@ -99,9 +99,15 @@ typedef maus_bus_err_t (*maus_bus_master_write_fn
 typedef maus_bus_err_t (*maus_bus_master_read_fn
 )(uint8_t address, uint8_t subaddress, uint8_t* data, size_t len);
 
+/**
+ * @brief Probe callback to detect if a device exists.
+ */
+typedef maus_bus_err_t (*maus_bus_master_probe_fn)(uint8_t address);
+
 typedef struct {
     maus_bus_master_read_fn read;
     maus_bus_master_write_fn write;
+    maus_bus_master_probe_fn probe;
 } maus_bus_config_t;
 
 typedef uint8_t* maus_bus_address_t;

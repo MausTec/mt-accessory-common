@@ -1,5 +1,4 @@
 #include "maus_bus.h"
-#include "eom-hal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +25,7 @@ static struct _device_driver_node {
 static maus_bus_config_t _config = {
     .read = NULL,
     .write = NULL,
+    .probe = NULL,
 };
 
 maus_bus_err_t maus_bus_init(maus_bus_config_t* config) {
@@ -209,9 +209,9 @@ size_t maus_bus_scan_bus_full(maus_bus_scan_callback_t cb, void* ptr) {
         if (_device_idx_by_address(addr_tmp) != -1) continue;
         if (_address_is_ignored(address)) continue;
 
-        eom_hal_err_t err = eom_hal_accessory_master_probe(address);
+        maus_bus_err_t err = _config.probe(address);
 
-        if (err != EOM_HAL_OK) {
+        if (err != MAUS_BUS_OK) {
             continue;
         }
 
