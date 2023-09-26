@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "drivers/generic_tscode.h"
+#include "drivers/pca9554.h"
 #include "drivers/sc16is740.h"
 
 static const uint8_t EEPROM_IDS[] = { 0x50, 0x69 };
@@ -293,8 +294,14 @@ maus_bus_driver_t* maus_bus_discover_driver(maus_bus_device_t* device) {
         driver->receive = &sc16_rx;
     } else if (device->features.tscode) {
         driver->transmit = &generic_tscode_tx;
-    } else {
-        return NULL;
+    }
+
+    // TODO - refactor to driver->gpio->x , driver->serial->tx/rx, etc.
+
+    if (device->features.gpio) {
+        driver->gpio_mode = &pca9554_set_gpio_mode;
+        driver->set_gpio = &pca9554_set_gpio_level;
+        driver->get_gpio = &pca9554_get_gpio_level;
     }
 
     return driver;

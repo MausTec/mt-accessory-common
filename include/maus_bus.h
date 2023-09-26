@@ -21,6 +21,8 @@ typedef struct {
 
     uint32_t serial : 1; // Device supports serial (UART) data streams using the ??? UART chip.
 
+    uint32_t gpio : 1; // Device supports GPIO commands.
+
 } maus_bus_device_features_t;
 
 /**
@@ -104,12 +106,19 @@ typedef maus_bus_err_t (*maus_bus_master_read_fn
  */
 typedef maus_bus_err_t (*maus_bus_master_probe_fn)(uint8_t address);
 
+/**
+ * @brief Configuration struct for integrating Maus-Bus driver into your hardware.
+ */
 typedef struct {
     maus_bus_master_read_fn read;
     maus_bus_master_write_fn write;
     maus_bus_master_probe_fn probe;
 } maus_bus_config_t;
 
+/**
+ * @brief Addresses are a null-terminated array of bytes.
+ * Each step in the address is one hop through a multiplexer.
+ */
 typedef uint8_t* maus_bus_address_t;
 
 typedef enum {
