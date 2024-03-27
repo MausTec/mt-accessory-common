@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#include "drivers/pca9554.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -79,17 +80,6 @@ typedef struct __attribute__((packed)) {
 } maus_bus_device_t;
 
 /**
- * @brief Generic error enumeration for Maus-Bus system functions.
- */
-typedef enum {
-    MAUS_BUS_OK,
-    MAUS_BUS_FAIL,
-    MAUS_BUS_TIMEOUT,
-    MAUS_BUS_NOT_SUPPORTED,
-    MAUS_BUS_NO_MEMORY,
-} maus_bus_err_t;
-
-/**
  * @brief Write callback to interface with your specific hardware setup.
  */
 typedef maus_bus_err_t (*maus_bus_master_write_fn
@@ -128,13 +118,24 @@ typedef enum {
     MAUS_BUS_STATUS_DISCONNECTED,
 } maus_bus_status_t;
 
-typedef struct {
+typedef struct maus_bus_uart_driver {
     maus_bus_err_t (*transmit)(uint8_t* data, size_t length);
     maus_bus_err_t (*receive)(uint8_t* data, size_t* count, size_t max_length);
     maus_bus_err_t (*set_mode)(uint32_t baud, uint8_t data, uint8_t parity, uint8_t stop);
+} maus_bus_uart_driver_t;
+
+typedef struct maus_bus_gpio_driver {
+    maus_bus_err_t (*mode)(uint8_t address, uint8_t gpio_num, pca9554_gpio_mode_t mode);
+    maus_bus_err_t (*set)(uint8_t address, uint8_t gpio_num, pca9554_gpio_level_t level);
+    maus_bus_err_t (*get)(uint8_t address, uint8_t gpio_num, pca9554_gpio_level_t* level);
+} maus_bus_gpio_driver_t;
+
+typedef struct maus_bus_driver {
+    maus_bus_uart_driver_t* uart;
+    maus_bus_gpio_driver_t* gpio;
 } maus_bus_driver_t;
 
-typedef struct {
+typedef struct maus_bus_device_link {
     maus_bus_address_t address;
     maus_bus_device_t* device;
     maus_bus_status_t status;
@@ -219,6 +220,13 @@ maus_bus_err_t maus_bus_register_device(maus_bus_address_t address);
 typedef void (*maus_bus_enumeration_callback_t
 )(maus_bus_driver_t* driver, maus_bus_device_t* device, maus_bus_address_t address, void* ptr);
 
+/**
+ * @brief Iterates over known devices, executing a callback for each.
+ *
+ * @param cb
+ * @param ptr
+ * @return maus_bus_err_t
+ */
 maus_bus_err_t maus_bus_enumerate_devices(maus_bus_enumeration_callback_t cb, void* ptr);
 
 #ifdef __cplusplus

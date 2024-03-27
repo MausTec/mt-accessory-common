@@ -74,7 +74,7 @@ size_t maus_bus_scan_bus_quick(maus_bus_scan_callback_t cb, void* ptr) {
     for (size_t i = 0; i < sizeof(EEPROM_IDS); i++) {
         uint8_t address = EEPROM_IDS[i];
         uint16_t guard = 0x0000;
-        eom_hal_accessory_master_read_register(address, 0x00, (uint8_t*)&guard, 2);
+        _config.read(address, 0x00, (uint8_t*)&guard, 2);
 
         if (guard == 0xCAFE) {
             struct _device_scan_node* node = malloc(sizeof(struct _device_scan_node));
@@ -90,9 +90,7 @@ size_t maus_bus_scan_bus_quick(maus_bus_scan_callback_t cb, void* ptr) {
             node->address = addr_path;
             node->next = NULL;
 
-            eom_hal_accessory_master_read_register(
-                address, 0x00, (uint8_t*)&node->device, sizeof(maus_bus_device_t)
-            );
+            _config.read(address, 0x00, (uint8_t*)&node->device, sizeof(maus_bus_device_t));
 
             // what in tarnation
             if (node->device.__guard != guard) return count;
@@ -288,20 +286,28 @@ maus_bus_driver_t* maus_bus_discover_driver(maus_bus_device_t* device) {
     // Enumerate Features
 
     if (device->features.serial) {
-        sc16_init(9600, SC16_DATA_8, SC16_PARITY_NONE, SC16_STOP_1);
+        driver->uart = malloc(sizeof(maus_bus_uart_driver_t));
 
-        driver->transmit = &sc16_tx;
-        driver->receive = &sc16_rx;
+        if (driver->uart != NULL) {
+            sc16_init(9600, SC16_DATA_8, SC16_PARITY_NONE, SC16_STOP_1);
+
+            driver->uart->transmit = &sc16_tx;
+            driver->uart->receive = &sc16_rx;
+        }
     } else if (device->features.tscode) {
-        driver->transmit = &generic_tscode_tx;
+        if (driver->uart != NULL) {
+            driver->uart->transmit = &generic_tscode_tx;
+        }
     }
 
-    // TODO - refactor to driver->gpio->x , driver->serial->tx/rx, etc.
-
     if (device->features.gpio) {
-        driver->gpio_mode = &pca9554_set_gpio_mode;
-        driver->set_gpio = &pca9554_set_gpio_level;
-        driver->get_gpio = &pca9554_get_gpio_level;
+        driver->gpio = malloc(sizeof(maus_bus_gpio_driver_t));
+
+        if (driver->gpio != NULL) {
+            driver->gpio->mode = &pca9554_set_gpio_mode;
+            driver->gpio->set = &pca9554_set_gpio_level;
+            driver->gpio->get = &pca9554_get_gpio_level;
+        }
     }
 
     return driver;
