@@ -22,9 +22,9 @@ typedef struct maus_bus_driver_actions {
  *
  */
 typedef struct maus_bus_driver_events {
-    struct maus_bus_driver_actions* action;
+    struct maus_bus_driver_actions* actions;
     struct maus_bus_driver_events* next;
-    char event[];
+    char event_name[];
 } maus_bus_driver_events_t;
 
 /**
@@ -67,6 +67,7 @@ typedef struct maus_bus_driver {
     maus_bus_driver_events_t* events;
     maus_bus_driver_functions_t* functions;
     maus_bus_driver_match_t* match;
+    maus_bus_driver_variables_t* variables;
     cJSON* config;
     char display_name[];
 } maus_bus_drivercfg_t;
