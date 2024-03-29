@@ -256,3 +256,7 @@ void maus_bus_driver_load(maus_bus_drivercfg_t** driver, cJSON* root) {
 
     ESP_LOGI(TAG, "-> Finished.");
 }
+
+void maus_bus_driver_event_invoke(maus_bus_drivercfg_t* driver, const char* event, int arg) {
+    ESP_LOGI(TAG, "MB Event Invocation: driver=%s, event=%s", driver->display_name, event);
+}
