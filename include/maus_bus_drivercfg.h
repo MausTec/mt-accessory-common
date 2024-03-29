@@ -7,6 +7,8 @@ extern "C" {
 
 #include "cJSON.h"
 
+struct maus_bus_driver_functions;
+
 /**
  * @brief Linked list of driver action invocations, which reference a functinon and pass arguments.
  *
@@ -14,6 +16,7 @@ extern "C" {
 typedef struct maus_bus_driver_actions {
     cJSON* args;
     struct maus_bus_driver_actions* next;
+    struct maus_bus_driver_functions* fn;
     char function[];
 } maus_bus_driver_actions_t;
 
@@ -72,9 +75,14 @@ typedef struct maus_bus_driver {
     char display_name[];
 } maus_bus_drivercfg_t;
 
+typedef void (*maus_bus_driver_system_function_t)(maus_bus_drivercfg_t* driver, cJSON* args);
+
 // Data Definitions
 void maus_bus_driver_load(maus_bus_drivercfg_t** driver, cJSON* root);
 void maus_bus_driver_unload(maus_bus_drivercfg_t* driver);
+void maus_bus_driver_register_system_function(
+    const char* fn_name, maus_bus_driver_system_function_t fn
+);
 
 maus_bus_driver_functions_t*
 maus_bus_driver_define_function(maus_bus_drivercfg_t* driver, const char* fn_name);

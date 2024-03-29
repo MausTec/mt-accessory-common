@@ -29,14 +29,6 @@ void maus_bus_driver_load_match(maus_bus_drivercfg_t* driver, cJSON* match_json)
     if (vid != NULL) match->vid = vid->valueint;
 
     driver->match = match;
-
-    ESP_LOGI(
-        TAG,
-        "-> Define Match: vid=%d, pid=%d, serial=%s",
-        driver->match->vid,
-        driver->match->pid,
-        driver->match->serial
-    );
 }
 
 void maus_bus_driver_load_actions(maus_bus_driver_actions_t** first, cJSON* actions) {
@@ -44,7 +36,6 @@ void maus_bus_driver_load_actions(maus_bus_driver_actions_t** first, cJSON* acti
     maus_bus_driver_actions_t* head = NULL;
     maus_bus_driver_actions_t* ptr = NULL;
 
-    ESP_LOGI(TAG, "--> Define all Actions.");
     if (actions == NULL || first == NULL) return;
 
     if (cJSON_IsArray(actions)) {
@@ -67,6 +58,7 @@ void maus_bus_driver_load_actions(maus_bus_driver_actions_t** first, cJSON* acti
             action->args = cJSON_DetachItemFromObject(actions, action_json->string);
             action->next = NULL;
 
+            // Since Object types contain multiple calls, build a chain
             if (head == NULL)
                 head = action;
             else {
@@ -75,7 +67,6 @@ void maus_bus_driver_load_actions(maus_bus_driver_actions_t** first, cJSON* acti
 
                 ptr->next = action;
             }
-            ESP_LOGI(TAG, "--> Loaded action to call %s with args", action->function);
         }
     }
 
@@ -87,14 +78,15 @@ void maus_bus_driver_load_actions(maus_bus_driver_actions_t** first, cJSON* acti
         action->args = NULL;
         action->next = NULL;
 
-        ESP_LOGI(TAG, "--> Loaded action to call %s", action->function);
+        // Since string types are single calls, just assign head.
+        head = action;
     }
 
     // Finally, attach the action.
-    if (action != NULL) {
-        if (*first == NULL)
+    if (head != NULL) {
+        if (*first == NULL) {
             *first = head;
-        else {
+        } else {
             for (ptr = *first; ptr->next != NULL; ptr = ptr->next)
                 ;
             ptr->next = head;
@@ -107,8 +99,6 @@ void maus_bus_driver_load_functions(maus_bus_drivercfg_t* driver, cJSON* functio
     maus_bus_driver_functions_t* ptr = NULL;
     maus_bus_driver_functions_t* function = NULL;
 
-    ESP_LOGI(TAG, "-> Define all Functions: %s", functions_json->string);
-
     if (driver == NULL || functions_json == NULL) return;
     if (!cJSON_IsObject(functions_json)) return;
 
@@ -116,7 +106,6 @@ void maus_bus_driver_load_functions(maus_bus_drivercfg_t* driver, cJSON* functio
 
     cJSON_ArrayForEach(fn_json, functions_json) {
         if (fn_json->string == NULL) continue;
-        ESP_LOGI(TAG, "--> Found fn: %s", fn_json->string);
 
         function = (maus_bus_driver_functions_t*)malloc(
             sizeof(maus_bus_driver_functions_t) + strlen(fn_json->string) + 1
@@ -130,14 +119,13 @@ void maus_bus_driver_load_functions(maus_bus_drivercfg_t* driver, cJSON* functio
         maus_bus_driver_load_actions(&function->actions, fn_json);
 
         // Register:
-        if (ptr == NULL)
+        if (ptr == NULL) {
             driver->functions = function;
-        else
+        } else {
             ptr->next = function;
+        }
 
         ptr = function;
-
-        ESP_LOGI(TAG, "--> Define function: %s", function->function_name);
     }
 }
 
@@ -146,8 +134,6 @@ void maus_bus_driver_load_variables(maus_bus_drivercfg_t* driver, cJSON* variabl
     maus_bus_driver_variables_t* ptr = NULL;
     maus_bus_driver_variables_t* variable = NULL;
 
-    ESP_LOGI(TAG, "-> Define all Variables: %s", variables_json->string);
-
     if (driver == NULL || variables_json == NULL) return;
     if (!cJSON_IsObject(variables_json)) return;
 
@@ -155,7 +141,6 @@ void maus_bus_driver_load_variables(maus_bus_drivercfg_t* driver, cJSON* variabl
 
     cJSON_ArrayForEach(var_json, variables_json) {
         if (var_json->string == NULL) continue;
-        ESP_LOGI(TAG, "--> Found var: %s", var_json->string);
 
         variable = (maus_bus_driver_variables_t*)malloc(
             sizeof(maus_bus_driver_variables_t) + strlen(var_json->string) + 1
@@ -173,8 +158,6 @@ void maus_bus_driver_load_variables(maus_bus_drivercfg_t* driver, cJSON* variabl
             ptr->next = variable;
 
         ptr = variable;
-
-        ESP_LOGI(TAG, "--> Define variable: %s=%d", variable->variable_name, variable->value);
     }
 }
 
@@ -183,8 +166,6 @@ void maus_bus_driver_load_events(maus_bus_drivercfg_t* driver, cJSON* events_jso
     maus_bus_driver_events_t* ptr = NULL;
     maus_bus_driver_events_t* event = NULL;
 
-    ESP_LOGI(TAG, "-> Define all Events: %s", events_json->string);
-
     if (driver == NULL || events_json == NULL) return;
     if (!cJSON_IsObject(events_json)) return;
 
@@ -192,7 +173,6 @@ void maus_bus_driver_load_events(maus_bus_drivercfg_t* driver, cJSON* events_jso
 
     cJSON_ArrayForEach(evt_json, events_json) {
         if (evt_json->string == NULL) continue;
-        ESP_LOGI(TAG, "--> Found evt: %s", evt_json->string);
 
         event = (maus_bus_driver_events_t*)malloc(
             sizeof(maus_bus_driver_events_t) + strlen(evt_json->string) + 1
@@ -212,8 +192,6 @@ void maus_bus_driver_load_events(maus_bus_drivercfg_t* driver, cJSON* events_jso
             ptr->next = event;
 
         ptr = event;
-
-        ESP_LOGI(TAG, "--> Define event: %s", event->event_name);
     }
 }
 
@@ -234,9 +212,13 @@ void maus_bus_driver_load(maus_bus_drivercfg_t** driver, cJSON* root) {
         return;
     }
 
+    // Initialize Default Values
+    (*driver)->functions = NULL;
+    (*driver)->events = NULL;
+    (*driver)->match = NULL;
+    (*driver)->variables = NULL;
+    (*driver)->config = NULL;
     strcpy((*driver)->display_name, display_name_str);
-
-    ESP_LOGI(TAG, "Maus-Bus Driver Loading: %s", (*driver)->display_name);
 
     // Populate Data
     cJSON* match = cJSON_GetObjectItem(root, "match");
@@ -253,10 +235,72 @@ void maus_bus_driver_load(maus_bus_drivercfg_t** driver, cJSON* root) {
 
     cJSON* events = cJSON_GetObjectItem(root, "events");
     if (events != NULL) maus_bus_driver_load_events(*driver, events);
+}
 
-    ESP_LOGI(TAG, "-> Finished.");
+maus_bus_driver_functions_t*
+maus_bus_driver_find_internal_function(maus_bus_drivercfg_t* driver, const char* fn_name) {
+    maus_bus_driver_functions_t* fn;
+    for (fn = driver->functions; fn != NULL; fn = fn->next) {
+        if (!strcmp(fn_name, fn->function_name)) {
+            return fn;
+        }
+    }
+    return NULL;
+}
+
+maus_bus_driver_functions_t*
+maus_bus_driver_find_system_function(maus_bus_drivercfg_t* driver, const char* fn_name) {
+    return NULL;
+}
+
+maus_bus_driver_functions_t*
+maus_bus_driver_find_driver_function(maus_bus_drivercfg_t* driver, const char* fn_name) {
+    return NULL;
+}
+
+void maus_bus_driver_function_call(
+    maus_bus_drivercfg_t* driver, const char* fn_name, cJSON* fn_args
+) {
+    static int call_depth = 0;
+    maus_bus_driver_functions_t* fn;
+
+    // Todo: bail out if call_depth is too high
+
+    if (fn_name[0] == '@') {
+        fn = maus_bus_driver_find_internal_function(driver, fn_name);
+
+        if (fn != NULL) {
+            call_depth++;
+
+            ESP_LOGI(TAG, "driver[%s]::%s()", driver->display_name, fn->function_name);
+
+            maus_bus_driver_action_invoke(driver, fn->actions);
+
+            call_depth--;
+        }
+    } else {
+        // System function call:
+        ESP_LOGI(TAG, "system::%s", fn_name);
+    }
+}
+
+void maus_bus_driver_action_invoke(
+    maus_bus_drivercfg_t* driver, maus_bus_driver_actions_t* actions
+) {
+    maus_bus_driver_actions_t* action;
+
+    for (action = actions; action != NULL; action = action->next) {
+        maus_bus_driver_function_call(driver, action->function, action->args);
+    }
 }
 
 void maus_bus_driver_event_invoke(maus_bus_drivercfg_t* driver, const char* event, int arg) {
-    ESP_LOGI(TAG, "MB Event Invocation: driver=%s, event=%s", driver->display_name, event);
+    maus_bus_driver_events_t* evt;
+
+    for (evt = driver->events; evt != NULL; evt = evt->next) {
+        if (!strcmp(event, evt->event_name)) {
+            ESP_LOGI(TAG, "MB Event Invocation: driver=%s, event=%s", driver->display_name, event);
+            maus_bus_driver_action_invoke(driver, evt->actions);
+        }
+    }
 }
