@@ -252,7 +252,7 @@ size_t maus_bus_scan_bus_full(maus_bus_scan_callback_t cb, void* ptr) {
 
         // Devices at this address SPECIFICALLY are TS-code listeners.
         if (address == 0x69) {
-            node->device.features.serial = 1;
+            node->device.features.serial = 0;
             node->device.features.tscode = 1;
         }
 
@@ -301,6 +301,8 @@ maus_bus_driver_t* maus_bus_discover_driver(maus_bus_device_t* device) {
             driver->uart->receive = &sc16_rx;
         }
     } else if (device->features.tscode) {
+        driver->uart = malloc(sizeof(maus_bus_uart_driver_t));
+
         if (driver->uart != NULL) {
             driver->uart->transmit = &generic_tscode_tx;
             driver->uart->receive = &generic_tscode_rx;
